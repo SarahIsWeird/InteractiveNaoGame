@@ -25,31 +25,44 @@ class MemoryGame(object):
         # Get the service ALMemory.
         self.memory = session.service("ALMemory")
         self.ALDialog = session.service("ALDialog")
-        self.ALDialog.setLanguage("German")
-        memory = session.service("ALMemory")
+        self.ALDialog.setLanguage("English")
+
+        #memory = session.service("ALMemory")
 
         #if topic is not put into home/nao folder, change path here...
-        self.startGameTopic = self.ALDialog.loadTopic("/home/nao/topics/start_memoryGame_topic.top")
+        try:
+            self.startGameTopic = self.ALDialog.loadTopic("/home/nao/topics/start_memoryGame_topic.top")
+        except:
+            self.startGameTopic = "start_game_topic"
 
         # Activating the loaded topic
         self.ALDialog.activateTopic(self.startGameTopic)
+
+        self.ALDialog.subscribe("PlayingMemory")
+
+
         # Connect the event callback.
-        subscriber = memory.subscriber("PlayingMemory")
-        subscriber.signal.connect(self.startGame)
+        # subscriber = memory.subscriber("PlayingMemory")
+        # subscriber.signal.connect(self.startGame)
+        
         # Get the services ALTextToSpeech and ALFaceDetection.
-        self.tts = session.service("ALTextToSpeech")
+        
+        #self.tts = session.service("ALTextToSpeech")
         #self.face_detection = session.service("ALFaceDetection")
         #self.face_detection.subscribe("HumanGreeter")
-        self.got_MemoryBoard = False
+        #self.got_MemoryBoard = False
 
     def startGame(self):
         print "start game"
 
     def run(self):
         print "Starting MemoryGame"
+
         try:
             self.ALDialog.setFocus(self.startGameTopic)
             self.ALDialog.forceOutput()
+            raw_input("\nSpeak to the robot using rules from the just loaded .top file. Press Enter when finished:")
+
         finally:
             self.ALDialog.unsubscribe("PlayingMemory")
             self.ALDialog.deactivateTopic(self.startGameTopic)
