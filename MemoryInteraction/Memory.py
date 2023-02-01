@@ -24,17 +24,18 @@ class MemoryGame(object):
         super(MemoryGame, self).__init__()
         # Get the service ALMemory.
         self.memory = session.service("ALMemory")
-        ALDialog.setLanguage("German")
+        self.ALDialog = session.service("ALDialog")
+        self.ALDialog.setLanguage("German")
         memory = session.service("ALMemory")
 
         #if topic is not put into home/nao folder, change path here...
-        startGame = ALDialog.loadTopic("/home/nao/start_memoryGame_topic.top")
+        self.startGameTopic = self.ALDialog.loadTopic("/home/nao/topics/start_memoryGame_topic.top")
 
         # Activating the loaded topic
-        ALDialog.activateTopic(startGame)
+        self.ALDialog.activateTopic(self.startGameTopic)
         # Connect the event callback.
         subscriber = memory.subscriber("PlayingMemory")
-        subscriber.signal.connect(startGame)
+        subscriber.signal.connect(self.startGame)
         # Get the services ALTextToSpeech and ALFaceDetection.
         self.tts = session.service("ALTextToSpeech")
         #self.face_detection = session.service("ALFaceDetection")
@@ -42,22 +43,22 @@ class MemoryGame(object):
         self.got_MemoryBoard = False
 
     def startGame(self):
-
+        print "start game"
 
     def run(self):
         print "Starting MemoryGame"
         try:
-            ALDialog.setFocus(startGame)
-            ALDialog.forceOutput()
+            self.ALDialog.setFocus(self.startGameTopic)
+            self.ALDialog.forceOutput()
         finally:
-            ALDialog.unsubscribe("PlayingMemory")
-            ALDialog.deactivateTopic(startGame)
-            ALDialog.unloadTopic(startGame)'
+            self.ALDialog.unsubscribe("PlayingMemory")
+            self.ALDialog.deactivateTopic(self.startGameTopic)
+            self.ALDialog.unloadTopic(self.startGameTopic)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ip", type=str, default="127.0.0.1",
+    parser.add_argument("--ip", type=str, default="nao.local",
                         help="Robot's IP address. If on a robot or a local Naoqi - use '127.0.0.1' (this is the default value).")
     parser.add_argument("--port", type=int, default=9559,
                         help="port number, the default value is OK in most cases")
