@@ -1,0 +1,4 @@
+topic: ~naosTurn_topic()
+language: ged
+
+proposal: %doneWithTurn Ich bin fertig, jetzt bist du dran! $HumansTurn=1

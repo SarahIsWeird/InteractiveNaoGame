@@ -1,12 +1,11 @@
 topic: ~start_game_topic()
-language: enu
+language: ged
 
 concept:(want) ["i´d like" "i want"]
 
-u: (hello) hello
-u: (Let's play memory) Yes, let's play. ^goto(startGame)
+u: (Lass uns Memory spielen!) Ja, lass uns spielen. ^goto(startGame)
 
-proposal: %startGame Do you want to start or should I?
-    u1:(* you *) Ok, so I will take turn.
-    recover
-    u1:(~want to start *) Ok, so it´s your turn.
+proposal: %startGame Möchtest du anfangen oder soll ich?
+    u1:(Fang du an.) Ok, dann werde ich starten. $NaosTurn=1
+    recover:
+    u1:(Ich möchte anfangen.) Ok, dann startest du. $HumansTurn=1

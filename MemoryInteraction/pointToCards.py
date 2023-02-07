@@ -13,7 +13,7 @@ import motion
 import time
 
 
-def main(session):
+def main(session, cardCoordinates=[0,3]):
     """
     Example of a whole body Left or Right Arm position control
     Warning: Needs a PoseInit before executing
@@ -21,8 +21,6 @@ def main(session):
     This example is only compatible with NAO
     """
     # Get the service ALMotion.
-
-    cardCoordinates = [0,3]
 
     if cardCoordinates[0] < 3:
         chainName = "LArm"

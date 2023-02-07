@@ -1,0 +1,4 @@
+topic: ~humansTurn_topic()
+language: ged
+
+u: ("Ich bin fertig") Ok, dann bin ich jetzt dran. $NaosTurn=1
