@@ -1,0 +1,10 @@
+topic: ~startGame_topic()
+language: German
+
+concept:(want) ["i´d like" "i want"]
+
+u: (Lass uns Memory spielen!) Ja, lass uns spielen. ^goto(startGame)
+u: (Fang du an.) Ok, dann werde ich starten. $NaosTurn=1
+u: (Ich möchte anfangen.) Ok, dann startest du. $HumansTurn=1
+
+proposal: %startGame Möchtest du anfangen oder soll ich?

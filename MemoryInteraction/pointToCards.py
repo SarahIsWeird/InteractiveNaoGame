@@ -31,6 +31,7 @@ def main(session, cardCoordinates=[0,3]):
 
     motion_service = session.service("ALMotion")
     posture_service = session.service("ALRobotPosture")
+    backgroundMovement_service = session.service("ALBackgroundMovement")
 
     # Wake up robot
     motion_service.wakeUp()
@@ -44,10 +45,10 @@ def main(session, cardCoordinates=[0,3]):
     effectorInit = motion_service.getPosition(chainName, frame, useSensor)
 
     # print motion state
-    print("Initial State:")
-    print(motion_service.getSummary())
-    print("Initial Arm Coordinates:")
-    print(effectorInit)
+    # print("Initial State:")
+    # print(motion_service.getSummary())
+    # print("Initial Arm Coordinates:")
+    # print(effectorInit)
 
     # Active LArm tracking
     isEnabled = True
@@ -72,9 +73,10 @@ def main(session, cardCoordinates=[0,3]):
     yAxisMapping = [+0.10, +0.03, -0.03, -0.10]
     targetCoordinate = [ +0.12, xAxisMapping[cardCoordinates[0]]*coef, yAxisMapping[cardCoordinates[1]]]
 
-    print(targetCoordinate)
-    print(chainName)
-    print(handName)
+    print("Pointing Infos:")
+    print("Koordinate: " + str(targetCoordinate))
+    print("Chain Name: " + chainName)
+    print("Hand Name: " + handName)
 
     # wbSetEffectorControl is a non blocking function
     # time.sleep allow head go to his target
@@ -93,22 +95,34 @@ def main(session, cardCoordinates=[0,3]):
     motion_service.wbSetEffectorControl(chainName, targetCoordinate)
     time.sleep(5.0)
 
+    initCoordinate = [effectorInit[i] for i in range(3)]
+    motion_service.wbSetEffectorControl(chainName, initCoordinate)
+
     motion_service.closeHand(handName)
 
+    motion_service.setIdlePostureEnabled(chainName, True)
+
     # print motion state
-    print("Final state: ")
-    print(motion_service.getSummary())
-    print("Final Arm Coordinates:")
-    print(motion_service.getPosition(chainName, frame, useSensor))
+    # print("Final state: ")
+    # print(motion_service.getSummary())
+    # print("Final Arm Coordinates:")
+    # print(motion_service.getPosition(chainName, frame, useSensor))
 
 
     # Go to rest position
-    motion_service.rest()
+    posture_service.goToPosture("StandInit", 0.5)
+
+    time.sleep(5)
+
+    backgroundMovement_service.setEnabled(True)
+
+    # time.sleep(10)
+
+    # motion_service.rest()
 
     # Deactivate Head tracking
-    isEnabled    = False
-    motion_service.wbEnableEffectorControl(chainName, isEnabled)
-    motion_service.wbEnable(False)
+    # motion_service.wbEnableEffectorControl(chainName, False)
+    # motion_service.wbEnable(False)
     
 
 

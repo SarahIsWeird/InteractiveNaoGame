@@ -34,34 +34,24 @@ class MemoryGame(object):
         # Get the service ALMemory.
         self.session = session
         self.memory = session.service("ALMemory")
+        self.tts = session.service("ALTextToSpeech")
 
         # Get the service ALDialog
         self.ALDialog = session.service("ALDialog")
         self.ALDialog.setLanguage("German")
 
-        try:
-            # If topic is not put into home/nao folder, change path here...
-            self.startGameTopic = self.ALDialog.loadTopic("/home/nao/topics/start_memoryGame_topic.top")
-        except:
-            self.startGameTopic = "start_game_topic"
+        self.topics = {
+            "startGame": "startGame_topic",
+            "humansTurn": "humansTurn_topic",
+            "naosTurn": "naosTurn_topic"
+        }
 
-        try:
-            # If topic is not put into home/nao folder, change path here...
-            self.humansTurnTopic = self.ALDialog.loadTopic("/home/nao/topics/memoryGame_HumansTurn.top")
-        except:
-            self.humansTurnTopic = "humansTurn_topic"
+        for topicName in self.topics:
+            self.loadTopic(self.topics[topicName])
 
-        try:
-            # If topic is not put into home/nao folder, change path here...
-            self.humansTurnTopic = self.ALDialog.loadTopic("/home/nao/topics/memoryGame_NaosTurn.top")
-        except:
-            self.humansTurnTopic = "naosTurn_topic"
+        print("All loaded topics: " + str(self.ALDialog.getAllLoadedTopics()))
 
-        self.ALDialog.activateTopic(self.startGameTopic)
-        self.ALDialog.activateTopic(self.humansTurnTopic)
-        self.ALDialog.activateTopic(self.naosTurnTopic)
-
-        self.ALDialog.subscribe("PlayingMemory")
+        self.activateOnlyTopic(self.topics["startGame"])
 
         # Connect the event callback.
         subscriberHumansTurn = self.memory.subscriber("HumansTurn")
@@ -70,13 +60,42 @@ class MemoryGame(object):
         subscriberHumansTurn.signal.connect(self.humansTurn)
         subscriberNaosTurn.signal.connect(self.naosTurn)
 
-        self.ALDialog.setFocus(self.startGameTopic)
         self.run()
         
         self.state = GameState()
 
-    def naosTurn(self):
-        print("It's NAOs turn.")
+    def loadTopic(self, topicName):
+        try:
+            self.ALDialog.loadTopic("/home/nao/topics/" + topicName + ".top")
+        except Exception as e:
+            print(str(e))
+
+    def activateOnlyTopic(self, topicName):
+        try:
+            self.ALDialog.unsubscribe("PlayingMemory")
+        except Exception as e:
+            print(str(e))
+
+        activeTopics = self.ALDialog.getActivatedTopics()
+        print("Previous ActiveTopics:" + str(activeTopics))
+
+        for topic in activeTopics: 
+            self.ALDialog.deactivateTopic(topic)
+
+
+        print("Topic to be activated: " + topicName)
+        # self.ALDialog.activateTopic(topicName)
+
+        # Check if activation was done correctly
+        activeTopics = self.ALDialog.getActivatedTopics()
+        print("After ActiveTopics:" + str(activeTopics))
+
+        self.ALDialog.subscribe("PlayingMemory")
+
+    def naosTurn(self, value):
+        print("NAOs turn starts.")
+
+        # self.activateOnlyTopic(self.topics["naosTurn"])
 
         # TODO: update the state, 
         #       i.e. recognize the cards on the board, 
@@ -86,9 +105,10 @@ class MemoryGame(object):
         # TODO: check if matching pair is known
         # TODO: determine first card to flip and point
         pointToCard(self.session, [0,0])
+
         # TODO: check if flipped card matches a known card
         # TODO: determine second card to flip and point
-        pointToCard(self.session, [2,2])
+        # pointToCard(self.session, [2,2])
 
         # TODO: recognize second flipped card, 
         #       save unknown ones to state, 
@@ -99,32 +119,43 @@ class MemoryGame(object):
 
         # TODO: announce current score
 
-        self.ALDialog.say("/home/nao/topics/memoryGame_NaosTurn.top", "doneWithTurn")
+        self.tts.say("Drehe die Karte A 1 um.")
+        self.memory.raiseEvent("HumansTurn", 1)
+        print("Nao's turn ends.")
 
-    def humansTurn(self):
-        self.activateOnlyTopic(self.humansTurnTopic)
-        print("It's human's turn.")
+    def humansTurn(self, value):
+        print("Human's turn starts.")
+        # self.activateOnlyTopic(self.topics["humansTurn"])
 
-    def activateOnlyTopic(topicName):
-        # TODO: write function
-        print("Active Topic: " + topicName)
+        # input("Drücke Enter, wenn du deinen Zug abgeschlossen hast!")
+        try:
+            raw_input("\nSpeak to the robot using rules from the just loaded .top file. Press Enter when finished:")
+        finally: 
+            self.memory.raiseEvent("NaosTurn", 1)
+            print("Human's turn ends.")
         
     def destroyGame(self):
+        activeTopics = self.ALDialog.getActivatedTopics()
+        print("ActiveTopics at exit:" + str(activeTopics))
+
         self.ALDialog.unsubscribe("PlayingMemory")
-        self.ALDialog.deactivateTopic(self.startGameTopic)
-        self.ALDialog.deactivateTopic(self.humansTurnTopic)
-        self.ALDialog.unloadTopic(self.startGameTopic)
-        self.ALDialog.unloadTopic(self.humansTurnTopic)
+
+        for topicName in self.topics:
+            try: 
+                self.ALDialog.deactivateTopic(self.topics[topicName])
+                self.ALDialog.unloadTopic(self.topics[topicName])
+            except Exception as e:
+                print(str(e))
 
     def run(self):
         print("Starting MemoryGame")
 
-        try:
-            raw_input("\nSpeak to the robot using rules from the just loaded .top file. Press Enter when finished:")
-        
-        finally:
-            self.destroyGame()
+        self.memory.raiseEvent("NaosTurn", 1)
 
+        while True:
+            time.sleep(20)
+            print("Is it Naos turn? " + str(self.memory.getData("NaosTurn")))
+            print("Is it Humans turn? " + str(self.memory.getData("HumansTurn")))
 
 
 if __name__ == "__main__":
