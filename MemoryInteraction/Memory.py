@@ -10,15 +10,114 @@ import qi
 import time
 import sys
 import argparse
+from random import *
 
 from pointToCards import main as pointToCard
 
+class Card():
+    picture = None
+    xcoord = None
+    ycoord = None
+    __isActive = True
+    
+    def __init__(self, picture, xcoord, ycoord):
+        self.picture = picture
+        self.xcoord = xcoord
+        self.ycoord = ycoord
+        
+    def getIsActive(self):
+        return self.__isActive
+        
+    def setIsActive(self, isActive):
+        self.__isActive = isActive
+
 class GameState(object):
     def __init__(self):
+        self.pictures = ["bus", "broccoli", "coffee", "teddy", "bottle", "car", "dog", "orange", "apple", "hydrant"]
+        self.board = [ [ None for i in range(4) ] for j in range(4) ]
+        self.history = []
+
         self.naoPoints = 0
         self.humanPoints = 0
 
+    def updateScore(self, oldCount):
+        currentCount = 0
+        for row in self.board:
+            for card in row:
+                if card != None:
+                    currentCount += 1
 
+        self.humanPoints += (oldCount - currentCount) %2
+
+
+class NaoRobot(object): 
+    def __init__(self):
+        self.knownCards = []
+        self.knownPairs = []
+        self.unknownCards = []
+
+        for i in range(4):
+            for j in range(4):
+                self.unknownCards.append(Card("unknown", i, j))
+
+    def deleteCardFromList(self, card, li):
+        if(li == "unknownCards"):
+            for i in self.unknownCards:
+                if(i.xcoord == card.xcoord and i.ycoord == card.ycoord):
+                    self.unknownCards.remove(i)
+        elif(li == "knownCards"):
+            for i in self.knownCards:
+                if(i.xcoord == card.xcoord and i.ycoord == card.ycoord):
+                    self.knownCards.remove(i)
+        elif(li == "knownPairs"):
+            for i in self.knownPairs:
+                if(i.picture == card.picture):
+                    self.knownPairs.remove(i)
+
+    def getStateOfBoard(self):
+        # currentBoard = [
+        #     ["dog", None, "hidden", "hidden", "hidden"],
+        #     ["hidden", "hidden", "hidden", "hidden", "hidden"],
+        #     ["hidden", None, "hidden", "hidden", None],
+        #     [None, "hidden", "bus", "hidden", "hidden"]
+        # ]
+
+        currentBoard = []
+
+        # TODO: fetch two dimensional array from image recognition interface
+
+        return currentBoard
+
+    def checkForKnownPairs(self):
+        knownPair = None
+
+        if len(self.knownPairs) > 0:
+            knownPair = [self.knownPairs[0]]
+            knownPair.append(self.knownPairs[1])
+
+            self.deleteCardFromList(self.knownPairs[0], "knownPairs")
+            self.deleteCardFromList(self.knownPairs[1], "knownPairs")
+
+        return knownPair
+
+    def checkForKnownCard(self, newCard):
+        knownCard = None
+
+        for card in self.knownCards:
+            if card.picture == newCard.picture:
+                knownCard = card
+
+        return knownCard
+
+    def pickRandomCard(self):
+        return self.unknownCards[randint(0, len(self.unknownCards) - 1)]
+
+    def countCards(self):
+        return len(self.unknownCards) + len(self.knownCards) + len(self.knownPairs)
+
+    def updateState(self, board):
+        # TODO: check which cards currently on the lists are now missing from the board
+        print("Update the state.")
 
 class MemoryGame(object):
     """
@@ -40,18 +139,16 @@ class MemoryGame(object):
         self.ALDialog = session.service("ALDialog")
         self.ALDialog.setLanguage("German")
 
-        self.topics = {
-            "startGame": "startGame_topic",
-            "humansTurn": "humansTurn_topic",
-            "naosTurn": "naosTurn_topic"
-        }
+        # self.topics = {
+        #     "startGame": "startGame_topic",
+        #     "humansTurn": "humansTurn_topic",
+        #     "naosTurn": "naosTurn_topic"
+        # }
 
-        for topicName in self.topics:
-            self.loadTopic(self.topics[topicName])
+        # for topicName in self.topics:
+        #     self.loadTopic(self.topics[topicName])
 
-        print("All loaded topics: " + str(self.ALDialog.getAllLoadedTopics()))
-
-        self.activateOnlyTopic(self.topics["startGame"])
+        # print("All loaded topics: " + str(self.ALDialog.getAllLoadedTopics()))
 
         # Connect the event callback.
         subscriberHumansTurn = self.memory.subscriber("HumansTurn")
@@ -60,9 +157,10 @@ class MemoryGame(object):
         subscriberHumansTurn.signal.connect(self.humansTurn)
         subscriberNaosTurn.signal.connect(self.naosTurn)
 
+        self.gameState = GameState()
+        self.naoRobot = NaoRobot()
+
         self.run()
-        
-        self.state = GameState()
 
     def loadTopic(self, topicName):
         try:
@@ -70,66 +168,76 @@ class MemoryGame(object):
         except Exception as e:
             print(str(e))
 
-    def activateOnlyTopic(self, topicName):
-        try:
-            self.ALDialog.unsubscribe("PlayingMemory")
-        except Exception as e:
-            print(str(e))
-
-        activeTopics = self.ALDialog.getActivatedTopics()
-        print("Previous ActiveTopics:" + str(activeTopics))
-
-        for topic in activeTopics: 
-            self.ALDialog.deactivateTopic(topic)
-
-
-        print("Topic to be activated: " + topicName)
-        # self.ALDialog.activateTopic(topicName)
-
-        # Check if activation was done correctly
-        activeTopics = self.ALDialog.getActivatedTopics()
-        print("After ActiveTopics:" + str(activeTopics))
-
-        self.ALDialog.subscribe("PlayingMemory")
-
     def naosTurn(self, value):
         print("NAOs turn starts.")
+        isPair = False
 
-        # self.activateOnlyTopic(self.topics["naosTurn"])
+        self.gameState.board = self.naoRobot.getStateOfBoard()
+        self.gameState.updateScore(self.naoRobot.countCards())
+        self.naoRobot.updateState(self.gameState.board)
 
-        # TODO: update the state, 
-        #       i.e. recognize the cards on the board, 
-        #       remove missing cards from game state, 
-        #       update game score
+        knownPair = self.naoRobot.checkForKnownPairs()
+        if knownPair:
+            pointToCard(self.session, [knownPair[0].xcoord, knownPair[0].ycoord])
+        else:
+            firstUnknownCard = self.naoRobot.pickRandomCard()
+            pointToCard(self.session, [firstUnknownCard.xcoord, firstUnknownCard.ycoord])
+            intermediateBoard = self.naoRobot.getStateOfBoard()
+            firstUnknownCard.picture = intermediateBoard[firstUnknownCard.xcoord][firstUnknownCard.ycoord]
 
-        # TODO: check if matching pair is known
-        # TODO: determine first card to flip and point
-        pointToCard(self.session, [0,0])
+        if knownPair: 
+            pointToCard(self.session, [knownPair[1].xcoord, knownPair[1].ycoord])
+            self.gameState.naoPoints += 1
+            isPair = True
+        else:
+            knownCard = self.naoRobot.checkForKnownCard(firstUnknownCard)
 
-        # TODO: check if flipped card matches a known card
-        # TODO: determine second card to flip and point
-        # pointToCard(self.session, [2,2])
+            if knownCard:
+                pointToCard(self.session, [knownCard.xcoord, knownCard.ycoord])
+                self.naoRobot.deleteCardFromList(firstUnknownCard, "unknownCards")
+                self.naoRobot.deleteCardFromList(knownCard, "knownCards")
+                self.gameState.naoPoints += 1
+                isPair = True
+            else:
+                self.naoRobot.deleteCardFromList(firstUnknownCard, "unknownCards")
+                self.naoRobot.knownCards.append(firstUnknownCard)
 
-        # TODO: recognize second flipped card, 
-        #       save unknown ones to state, 
-        #       check if it's a pair
+                secondUnknownCard = self.naoRobot.pickRandomCard()
+                pointToCard(self.session, [secondUnknownCard.xcoord, secondUnknownCard.ycoord])
+                intermediateBoard = self.naoRobot.getStateOfBoard()
+                secondUnknownCard.picture = intermediateBoard[firstUnknownCard.xcoord][firstUnknownCard.ycoord]
 
-        # TODO: tell human to flip cards or 
-        #       take them off the board, if it was a pair
+                self.naoRobot.deleteCardFromList(secondUnknownCard, "unknownCards")
 
-        # TODO: announce current score
+                if firstUnknownCard.picture == secondUnknownCard.picture:
+                    self.gameState.naoPoints += 1
+                    isPair = True
+                    self.naoRobot.deleteCardFromList(firstUnknownCard, "knownCards")
+                else:
+                    knownCard = self.naoRobot.checkForKnownCard(secondUnknownCard)
+                    if knownCard:
+                        self.naoRobot.deleteCardFromList(knownCard, "knownCards")
+                        self.naoRobot.knownPairs.append(knownCard)
+                        self.naoRobot.knownPairs.append(secondUnknownCard)
+                    else:
+                        self.naoRobot.knownCards.append(secondUnknownCard)
 
-        self.tts.say("Drehe die Karte A 1 um.")
-        self.memory.raiseEvent("HumansTurn", 1)
+        if isPair:
+            self.tts.say("Bitte nimm das Paar vom Spielbrett. Dann starte ich meinen nächsten Zug!")
+            self.tts.say("Ich habe gerade " + str(self.gameState.naoPoints) + " und du hast gerade " + str(self.gameState.humanPoints) + " Punkte.")
+            self.memory.raiseEvent("NaosTurn", 1)
+        else: 
+            self.tts.say("Bitte dreh die Karten wieder um und beginne mit deinem Zug.")
+            self.tts.say("Ich habe gerade " + str(self.gameState.naoPoints) + " und du hast gerade " + str(self.gameState.humanPoints) + " Punkte.")
+            self.memory.raiseEvent("HumansTurn", 1)
+
         print("Nao's turn ends.")
 
     def humansTurn(self, value):
         print("Human's turn starts.")
-        # self.activateOnlyTopic(self.topics["humansTurn"])
 
-        # input("Drücke Enter, wenn du deinen Zug abgeschlossen hast!")
         try:
-            raw_input("\nSpeak to the robot using rules from the just loaded .top file. Press Enter when finished:")
+            raw_input("\nDrücke Enter, wenn du deinen Zug abgeschlossen hast!")
         finally: 
             self.memory.raiseEvent("NaosTurn", 1)
             print("Human's turn ends.")

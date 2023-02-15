@@ -32,6 +32,7 @@ def main(session, cardCoordinates=[0,3]):
     motion_service = session.service("ALMotion")
     posture_service = session.service("ALRobotPosture")
     backgroundMovement_service = session.service("ALBackgroundMovement")
+    tts_service = session.service("ALTextToSpeech")
 
     # Wake up robot
     motion_service.wakeUp()
@@ -93,6 +94,10 @@ def main(session, cardCoordinates=[0,3]):
 
     targetCoordinate = [targetCoordinate[i] + effectorInit[i] for i in range(3)]
     motion_service.wbSetEffectorControl(chainName, targetCoordinate)
+
+    letter = ["A", "B", "C", "D", "E"][cardCoordinates[0]]
+    tts_service.say("Drehe die Karte " + letter + " " + str(cardCoordinates[1] + 1)  + " um.")
+
     time.sleep(5.0)
 
     initCoordinate = [effectorInit[i] for i in range(3)]
